@@ -133,18 +133,30 @@ module ECS
     end
 
     macro finished
-      {% for obj in Component.all_subclasses %} 
+      {% for obj in Component.all_subclasses %}
       {% obj_name = obj.id.split("::").last.id %}
       def get{{obj_name}}
-        @world.pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).get_component?(@id) || raise Exception.new("{{obj}} not present on entity #{self}")
+        @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(@id) || raise Exception.new("{{obj}} not present on entity #{self}")
       end
-  
+
       def get{{obj_name}}?
-        @world.pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).get_component?(@id)
+        @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(@id)
       end
 
       def get{{obj_name}}_ptr
-        @world.pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).get_component_ptr(@id)
+        @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component_ptr(@id)
+      end
+
+      def get_{{obj_name.underscore}}
+        @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(@id) || raise Exception.new("{{obj}} not present on entity #{self}")
+      end
+
+      def get_{{obj_name.underscore}}?
+        @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(@id)
+      end
+
+      def get_{{obj_name.underscore}}_ptr
+        @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component_ptr(@id)
       end
       {% end %}
     end
@@ -624,15 +636,15 @@ module ECS
 
     macro finished
       private def init_pools
-        {% for index in 1..COMP_INDICES.size %} 
+        {% for index in 1..COMP_INDICES.size %}
           @pools << nil.unsafe_as(BasePool)
         {% end %}
 
-        {% for obj, index in Component.all_subclasses %} 
+        {% for obj, index in Component.all_subclasses %}
           {% if obj.annotation(ECS::Singleton) %}
-            @pools[{{COMP_INDICES[obj]}}] = SingletonPool({{obj}}).new(self) 
+            @pools[{{COMP_INDICES[obj]}}] = SingletonPool(::{{obj}}).new(self)
           {% else %}
-            @pools[{{COMP_INDICES[obj]}}] = NormalPool({{obj}}).new(self) 
+            @pools[{{COMP_INDICES[obj]}}] = NormalPool(::{{obj}}).new(self)
           {% end %}
 
 
@@ -642,32 +654,44 @@ module ECS
         {% end %}
       end
 
-      {% for obj in Component.all_subclasses %} 
+      {% for obj in Component.all_subclasses %}
         @[AlwaysInline]
-        protected def pool_for(component : {{obj}}) : Pool({{obj}})
-          @pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}}))
+        protected def pool_for(component : ::{{obj}}) : Pool(::{{obj}})
+          @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}}))
         end
 
         {% if obj.annotation(ECS::Singleton) %}
           {% obj_name = obj.id.split("::").last.id %}
           def get{{obj_name}}
-          @pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).get_component?(NO_ENTITY) || raise Exception.new("{{obj}} was not created")
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(NO_ENTITY) || raise Exception.new("{{obj}} was not created")
           end
-      
+
           def get{{obj_name}}?
-            @pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).get_component?(NO_ENTITY)
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(NO_ENTITY)
           end
-    
+
           def get{{obj_name}}_ptr
-            @pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).get_component_ptr(NO_ENTITY)
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component_ptr(NO_ENTITY)
+          end
+
+          def get_{{obj_name.underscore}}
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(NO_ENTITY) || raise Exception.new("{{obj}} was not created")
+          end
+
+          def get_{{obj_name.underscore}}?
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(NO_ENTITY)
+          end
+
+          def get_{{obj_name.underscore}}_ptr
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component_ptr(NO_ENTITY)
           end
 
           def add(comp : {{obj}})
-            @pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).add_component(NO_ENTITY, comp)
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).add_component(NO_ENTITY, comp)
           end
 
           def set(comp : {{obj}})
-            @pools[{{COMP_INDICES[obj]}}].as(Pool({{obj}})).add_or_update_component(NO_ENTITY, comp)
+            @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).add_or_update_component(NO_ENTITY, comp)
           end
 
           def remove(typ : {{obj}}.class)
@@ -677,9 +701,9 @@ module ECS
           def remove_if_present(typ : {{obj}}.class)
             @pools[{{COMP_INDICES[obj]}}].try_remove_component(NO_ENTITY)
           end
-        
+
         {% end %}
-    
+
       {% end %}
 
       @[AlwaysInline]
@@ -690,8 +714,8 @@ module ECS
       # Non-allocating version of `stats`. Yields component names and count of corresponding components
       # ```
       # world = init_benchmark_world(1000000)
-      # world.stats do |comp_name, value| 
-      #   puts "#{comp_name}: #{value}" 
+      # world.stats do |comp_name, value|
+      #   puts "#{comp_name}: #{value}"
       # end
       # ```
       def stats(& : String, Int32 ->)
