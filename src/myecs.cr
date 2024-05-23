@@ -151,7 +151,7 @@ module ECS
         @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(@id) || raise Exception.new("{{obj}} not present on entity #{self}")
       end
 
-      def get_{{obj_name.underscore}}?
+      def {{obj_name.underscore}}?
         @world.pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(@id)
       end
 
@@ -678,7 +678,7 @@ module ECS
             @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(NO_ENTITY) || raise Exception.new("{{obj}} was not created")
           end
 
-          def get_{{obj_name.underscore}}?
+          def {{obj_name.underscore}}?
             @pools[{{COMP_INDICES[obj]}}].as(Pool(::{{obj}})).get_component?(NO_ENTITY)
           end
 
